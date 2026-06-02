@@ -114,13 +114,14 @@ def get_worksheet():
     except gspread.WorksheetNotFound:
         ws = sheet.add_worksheet(WORKSHEET_NAME, rows=500, cols=20)
         ws.append_row([
-            "timestamp", "session_id", "evaluator_name", "story_id",
-            "rank_A", "rank_B", "rank_C", "cond_A", "cond_B", "cond_C",
+            "timestamp", "session_id", "story_id",
+            "rank_A", "rank_B", "rank_C",
+            "condition_A", "condition_B", "condition_C",
         ])
     return ws
 
 
-def save_responses(session_id, evaluator_name, rankings, label_maps):
+def save_responses(session_id, rankings, label_maps):
     ws = get_worksheet()
     rows = []
     for i, story in enumerate(STORIES):
@@ -128,7 +129,8 @@ def save_responses(session_id, evaluator_name, rankings, label_maps):
         r = rankings[i]
         rows.append([
             datetime.now(timezone.utc).isoformat(),
-            session_id, evaluator_name, story["id"],
+            session_id,
+            story["id"],
             r["A"], r["B"], r["C"],
             lm["A"], lm["B"], lm["C"],
         ])
@@ -288,7 +290,6 @@ if st.button("שלח", type="primary", use_container_width=True, disabled=(remai
         try:
             save_responses(
                 st.session_state.session_id,
-                "",
                 st.session_state.rankings,
                 st.session_state.label_maps,
             )
