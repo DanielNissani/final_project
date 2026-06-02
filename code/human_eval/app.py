@@ -173,10 +173,9 @@ st.markdown(
 st.markdown("""
 <div class="heb" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;
      padding:16px 22px;margin:14px 0 14px 0;line-height:1.9;">
-<b>הוראות:</b> לכל סיפור מוצגות שלוש תגובות (A, B, C).
-דרגו כל תגובה: <b>1 = הכי טובה &nbsp;·&nbsp; 3 = הכי פחות טובה</b>.
-<br>כל תגובה חייבת לקבל דירוג <em>שונה</em> — לא ניתן להקצות אותו דירוג פעמיים לאותו סיפור.
-<br><span style="color:#6b7280;font-size:0.9em;">לביטול בחירה — לחצו שוב על הדירוג הנבחר.</span>
+תגובה טובה היא תגובה אמפתית.
+<br><b>הוראות:</b> לכל סיפור מוצגות שלוש תגובות (A, B, C). דרגו כל תגובה לפי מידת האמפתיות: <b>1 = הכי טובה &nbsp;·&nbsp; 3 = הכי פחות טובה</b>.
+<br><span style="color:#6b7280;font-size:0.9em;">כל תגובה חייבת לקבל דירוג שונה. לביטול בחירה — לחצו שוב על הדירוג הנבחר.</span>
 </div>
 """, unsafe_allow_html=True)
 
