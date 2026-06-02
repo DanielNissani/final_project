@@ -180,7 +180,12 @@ st.markdown("""
 
 n_total = len(STORIES)
 n_complete = sum(story_complete(i) for i in range(n_total))
-st.progress(n_complete / n_total, text=f"הושלמו: {n_complete} מתוך {n_total} סיפורים")
+st.progress(n_complete / n_total)
+st.markdown(
+    f'<p class="heb" style="font-size:0.9em;color:#6b7280;margin-top:-6px;">'
+    f'הושלמו: {n_complete} מתוך {n_total} סיפורים</p>',
+    unsafe_allow_html=True,
+)
 
 # ── ALREADY SUBMITTED ─────────────────────────────────────────────────────────
 if st.session_state.submitted:
@@ -188,9 +193,6 @@ if st.session_state.submitted:
     st.balloons()
     st.stop()
 
-# ── EVALUATOR NAME ────────────────────────────────────────────────────────────
-st.divider()
-evaluator_name = st.text_input("שם (אופציונלי)", placeholder="לדוגמה: משתתף 1")
 st.divider()
 
 # ── STORY SECTIONS ────────────────────────────────────────────────────────────
@@ -286,7 +288,7 @@ if st.button("שלח", type="primary", use_container_width=True, disabled=(remai
         try:
             save_responses(
                 st.session_state.session_id,
-                evaluator_name,
+                "",
                 st.session_state.rankings,
                 st.session_state.label_maps,
             )
