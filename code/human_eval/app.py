@@ -34,7 +34,9 @@ st.markdown("""
     line-height: 1.85;
     color: #1e3a8a;
     font-size: 1em;
-    margin: 10px 0 18px 0;
+    margin: 10px 0 14px 0;
+    direction: ltr;
+    text-align: left;
 }
 
 .resp-card {
@@ -43,8 +45,10 @@ st.markdown("""
     line-height: 1.75;
     color: #374151;
     font-size: 0.97em;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
     background: white;
+    direction: ltr;
+    text-align: left;
 }
 .resp-A { border-left: 5px solid #22c55e; }
 .resp-B { border-left: 5px solid #3b82f6; }
@@ -62,14 +66,6 @@ st.markdown("""
 .badge-B { background: #dbeafe; color: #1d4ed8; }
 .badge-C { background: #fef9c3; color: #a16207; }
 
-.rank-hint {
-    font-size: 0.82em;
-    color: #9ca3af;
-    margin-top: 6px;
-    direction: rtl;
-    text-align: right;
-}
-
 .done-chip {
     background: #d1fae5;
     color: #065f46;
@@ -78,18 +74,10 @@ st.markdown("""
     font-size: 0.82em;
     font-weight: 600;
 }
-.todo-chip {
-    background: #fef3c7;
-    color: #92400e;
-    padding: 3px 11px;
-    border-radius: 20px;
-    font-size: 0.82em;
-}
 
-/* enlarge pills slightly */
 div[data-testid="stPills"] button {
     font-size: 0.97em !important;
-    padding: 6px 16px !important;
+    padding: 6px 18px !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -102,10 +90,16 @@ SCOPES = [
 SHEET_KEY = "1hoHJpX8M3763kI28bGOS0JH2CdTyWmB2Y-0pmhTYJHU"
 WORKSHEET_NAME = "responses"
 
-RANK_LABELS = {1: "🥇 1 — הכי טוב / Best", 2: "🥈 2", 3: "🥉 3 — הכי פחות טוב / Worst"}
+RANK_LABELS = {1: "🥇 1 — הכי טוב", 2: "🥈 2", 3: "🥉 3 — הכי פחות טוב"}
+RANK_SHORT   = {1: "🥇 1", 2: "🥈 2", 3: "🥉 3"}
 LABELS = ["A", "B", "C"]
 BADGE_CLASS = {"A": "badge-A", "B": "badge-B", "C": "badge-C"}
-RESP_CLASS = {"A": "resp-A", "B": "resp-B", "C": "resp-C"}
+RESP_CLASS  = {"A": "resp-A",  "B": "resp-B",  "C": "resp-C"}
+
+
+def fmt_rank(x):
+    return RANK_LABELS[x]
+
 
 # ── GOOGLE SHEETS ─────────────────────────────────────────────────────────────
 @st.cache_resource
@@ -120,10 +114,8 @@ def get_worksheet():
     except gspread.WorksheetNotFound:
         ws = sheet.add_worksheet(WORKSHEET_NAME, rows=500, cols=20)
         ws.append_row([
-            "timestamp", "session_id", "evaluator_name",
-            "story_id",
-            "rank_A", "rank_B", "rank_C",
-            "cond_A", "cond_B", "cond_C",
+            "timestamp", "session_id", "evaluator_name", "story_id",
+            "rank_A", "rank_B", "rank_C", "cond_A", "cond_B", "cond_C",
         ])
     return ws
 
@@ -172,44 +164,33 @@ def story_complete(story_idx):
 
 # ── HEADER ────────────────────────────────────────────────────────────────────
 st.markdown(
-    '<h1 style="text-align:center;color:#312e81;margin-bottom:2px;">💬 הערכת תגובות אמפתיה</h1>'
-    '<p style="text-align:center;color:#6b7280;margin-top:0;">Empathy Response Evaluation</p>',
+    '<h1 style="text-align:center;color:#312e81;margin-bottom:4px;">💬 הערכת תגובות אמפתיה</h1>',
     unsafe_allow_html=True,
 )
 
 st.markdown("""
-<div class="heb" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 20px;margin:14px 0 6px 0;">
+<div class="heb" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;
+     padding:16px 22px;margin:14px 0 14px 0;line-height:1.9;">
 <b>הוראות:</b> לכל סיפור מוצגות שלוש תגובות (A, B, C).
 דרגו כל תגובה: <b>1 = הכי טובה &nbsp;·&nbsp; 3 = הכי פחות טובה</b>.
-כל תגובה חייבת לקבל דירוג <em>שונה</em> — לא ניתן להקצות אותו דירוג פעמיים.
-</div>
-<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 20px;margin-bottom:14px;">
-<b>Instructions:</b> For each story, rank the three responses (A, B, C):
-<b>1 = best &nbsp;·&nbsp; 3 = worst</b>.
-Each response must receive a <em>unique</em> rank — the same rank cannot be used twice in one story.
+<br>כל תגובה חייבת לקבל דירוג <em>שונה</em> — לא ניתן להקצות אותו דירוג פעמיים לאותו סיפור.
+<br><span style="color:#6b7280;font-size:0.9em;">לביטול בחירה — לחצו שוב על הדירוג הנבחר.</span>
 </div>
 """, unsafe_allow_html=True)
 
-# progress bar
-n_complete = sum(story_complete(i) for i in range(len(STORIES)))
 n_total = len(STORIES)
-st.progress(
-    n_complete / n_total,
-    text=f"הושלמו / Completed: {n_complete} / {n_total}",
-)
+n_complete = sum(story_complete(i) for i in range(n_total))
+st.progress(n_complete / n_total, text=f"הושלמו: {n_complete} מתוך {n_total} סיפורים")
 
 # ── ALREADY SUBMITTED ─────────────────────────────────────────────────────────
 if st.session_state.submitted:
-    st.success("✅ תודה רבה! התגובות שלך נשמרו. / Thank you! Your responses have been saved.")
+    st.success("✅ תודה רבה! התגובות שלך נשמרו.")
     st.balloons()
     st.stop()
 
 # ── EVALUATOR NAME ────────────────────────────────────────────────────────────
 st.divider()
-evaluator_name = st.text_input(
-    "שם (אופציונלי) / Name (optional)",
-    placeholder="e.g. Participant 1",
-)
+evaluator_name = st.text_input("שם (אופציונלי)", placeholder="לדוגמה: משתתף 1")
 st.divider()
 
 # ── STORY SECTIONS ────────────────────────────────────────────────────────────
@@ -217,73 +198,87 @@ for i, story in enumerate(STORIES):
     lm = st.session_state.label_maps[i]
     done = story_complete(i)
 
-    # Story header row
+    # Story header
     h_col, s_col = st.columns([5, 1])
     with h_col:
-        st.subheader(f"סיפור {i + 1} / Story {i + 1}")
+        st.subheader(f"סיפור {i + 1}")
     with s_col:
-        chip = '<span class="done-chip">✓ הושלם</span>' if done else '<span class="todo-chip">● ממתין</span>'
-        st.markdown(f'<div style="padding-top:14px;text-align:right;">{chip}</div>', unsafe_allow_html=True)
+        if done:
+            st.markdown(
+                '<div style="padding-top:14px;text-align:right;">'
+                '<span class="done-chip">✓ הושלם</span></div>',
+                unsafe_allow_html=True,
+            )
 
-    # Story text
+    # Story text (English — LTR)
     st.markdown(f'<div class="story-box">{story["story"]}</div>', unsafe_allow_html=True)
 
-    # Responses
+    # Response cards — show current assigned rank in badge if set
     for label in LABELS:
         condition_key = lm[label]
         response_text = story["responses"][condition_key]
+        current_rank = st.session_state.rankings[i][label]
+        rank_suffix = f" &nbsp;— {RANK_SHORT[current_rank]}" if current_rank else ""
 
-        opts = available_ranks(i, label)
-        current = st.session_state.rankings[i][label]
-
-        # Render response card
         st.markdown(
             f'<div class="resp-card {RESP_CLASS[label]}">'
-            f'<span class="badge {BADGE_CLASS[label]}">תשובה {label} / Response {label}</span>'
-            f'<div>{response_text}</div>'
+            f'<span class="badge {BADGE_CLASS[label]}">תשובה {label}{rank_suffix}</span>'
+            f'<div style="margin-top:8px;">{response_text}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
 
-        # Rank pills — only ranks not taken by other labels are shown
-        st.caption("דירוג / Rank:")
-        sel = st.pills(
-            f"rank_{i}_{label}",
-            options=opts,
-            format_func=lambda x: RANK_LABELS[x],
-            selection_mode="single",
-            key=f"rank_{i}_{label}",
-            label_visibility="collapsed",
-        )
-
-        # Update rankings immediately so next label sees this choice
-        st.session_state.rankings[i][label] = sel
-
-        st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+    # ── Ranking section (single block after all 3 responses) ─────────────────
+    st.markdown(
+        '<div class="heb" style="font-weight:700;font-size:1em;color:#374151;'
+        'margin:14px 0 6px 0;">דרגו את התגובות:</div>',
+        unsafe_allow_html=True,
+    )
+    with st.container(border=True):
+        for label in LABELS:
+            opts = available_ranks(i, label)
+            col_lbl, col_pills = st.columns([1, 4])
+            with col_lbl:
+                st.markdown(
+                    f'<div style="padding-top:6px;text-align:right;direction:rtl;">'
+                    f'<span class="badge {BADGE_CLASS[label]}">תשובה {label}</span></div>',
+                    unsafe_allow_html=True,
+                )
+            with col_pills:
+                sel = st.pills(
+                    f"rank_{i}_{label}",
+                    options=opts,
+                    format_func=fmt_rank,
+                    selection_mode="single",
+                    key=f"rank_{i}_{label}",
+                    label_visibility="collapsed",
+                )
+            # Update immediately so next label sees this selection
+            st.session_state.rankings[i][label] = sel
 
     st.divider()
 
 # ── SUBMIT ────────────────────────────────────────────────────────────────────
-remaining = n_total - sum(story_complete(i) for i in range(n_total))
+n_complete_now = sum(story_complete(i) for i in range(n_total))
+remaining = n_total - n_complete_now
+
 if remaining > 0:
     st.markdown(
-        f'<p class="heb" style="text-align:center;color:#b45309;">'
-        f'נותרו {remaining} סיפורים להשלמה / {remaining} stories remaining'
-        f'</p>',
+        f'<p class="heb" style="text-align:center;color:#b45309;font-size:0.95em;">'
+        f'נותרו {remaining} סיפורים להשלמה</p>',
         unsafe_allow_html=True,
     )
 
-all_done = remaining == 0
-if st.button("שלח / Submit", type="primary", use_container_width=True, disabled=not all_done):
-    # Final validation (defensive)
+if st.button("שלח", type="primary", use_container_width=True, disabled=(remaining > 0)):
+    # Defensive final validation
     error = None
     for i, r in enumerate(st.session_state.rankings):
         vals = [r["A"], r["B"], r["C"]]
         if any(v is None for v in vals):
-            error = f"סיפור {i+1}: יש למלא את כל הדירוגים. / Story {i+1}: all ranks required."
+            error = f"סיפור {i+1}: יש למלא את כל הדירוגים."
             break
         if len(set(vals)) != 3:
-            error = f"סיפור {i+1}: כל דירוג חייב להיות שונה. / Story {i+1}: ranks must be unique."
+            error = f"סיפור {i+1}: כל דירוג חייב להיות שונה."
             break
     if error:
         st.error(error)
@@ -298,4 +293,4 @@ if st.button("שלח / Submit", type="primary", use_container_width=True, disabl
             st.session_state.submitted = True
             st.rerun()
         except Exception as e:
-            st.error(f"שגיאה בשמירה. נסה שוב. / Save error. Please retry.\n\n`{e}`")
+            st.error(f"שגיאה בשמירה. נסה שוב.\n\n`{e}`")
