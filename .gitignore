@@ -1,0 +1,28 @@
+# Large model files — too big for GitHub
+*.pth
+*.safetensors
+*.bin
+*.pt
+
+# Data files
+*.csv
+*.xlsx
+*.xls
+
+# Secrets
+**/.streamlit/secrets.toml
+*.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# OS
+.DS_Store
+
+# PDFs / office docs
+*.pdf
+*.pptx
+*.docx
