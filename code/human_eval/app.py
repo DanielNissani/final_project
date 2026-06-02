@@ -199,16 +199,14 @@ for i, story in enumerate(STORIES):
     done = story_complete(i)
 
     # Story header
-    h_col, s_col = st.columns([5, 1])
-    with h_col:
-        st.subheader(f"סיפור {i + 1}")
-    with s_col:
-        if done:
-            st.markdown(
-                '<div style="padding-top:14px;text-align:right;">'
-                '<span class="done-chip">✓ הושלם</span></div>',
-                unsafe_allow_html=True,
-            )
+    done_html = '<span class="done-chip">✓ הושלם</span>' if done else ""
+    st.markdown(
+        f'<div style="display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-bottom:4px;">'
+        f'{done_html}'
+        f'<span style="font-size:1.35em;font-weight:700;color:#312e81;direction:rtl;">סיפור {i + 1}</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
     # Story text (English — LTR)
     st.markdown(f'<div class="story-box">{story["story"]}</div>', unsafe_allow_html=True)
@@ -222,8 +220,10 @@ for i, story in enumerate(STORIES):
 
         st.markdown(
             f'<div class="resp-card {RESP_CLASS[label]}">'
+            f'<div style="text-align:right;direction:rtl;margin-bottom:8px;">'
             f'<span class="badge {BADGE_CLASS[label]}">תשובה {label}{rank_suffix}</span>'
-            f'<div style="margin-top:8px;">{response_text}</div>'
+            f'</div>'
+            f'<div>{response_text}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
