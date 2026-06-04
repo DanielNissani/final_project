@@ -108,9 +108,6 @@ BADGE_CLASS = {"A": "badge-A", "B": "badge-B", "C": "badge-C"}
 RESP_CLASS  = {"A": "resp-A",  "B": "resp-B",  "C": "resp-C"}
 
 
-def _mark_score(i, label):
-    """Called on_change — marks slider as explicitly touched."""
-    st.session_state.scores[i][label] = st.session_state[f"score_{i}_{label}"]
 
 
 # ── GOOGLE SHEETS ─────────────────────────────────────────────────────────────
@@ -235,19 +232,18 @@ for i, story in enumerate(STORIES):
         )
 
         st.markdown(
-            '<div class="heb" style="font-size:0.85em;color:#6b7280;margin:2px 0 -2px 0;">'
+            '<div class="heb" style="font-size:0.85em;color:#6b7280;margin:10px 0 6px 0;">'
             '1 = לא אמפתית בכלל &nbsp;·&nbsp; 7 = מאוד אמפתית</div>',
             unsafe_allow_html=True,
         )
-        st.select_slider(
+        sel = st.pills(
             f"score_{i}_{label}",
             options=SCORE_OPTS,
-            value=4,
+            selection_mode="single",
             key=f"score_{i}_{label}",
-            on_change=_mark_score,
-            args=(i, label),
             label_visibility="collapsed",
         )
+        st.session_state.scores[i][label] = sel
 
     st.divider()
 
