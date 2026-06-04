@@ -88,17 +88,16 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive",
 ]
 SHEET_KEY = "1hoHJpX8M3763kI28bGOS0JH2CdTyWmB2Y-0pmhTYJHU"
-WORKSHEET_NAME = "responses"
+WORKSHEET_NAME = "scores"
 
-RANK_LABELS = {1: "🥇 1 — הכי טוב", 2: "🥈 2", 3: "🥉 3 — הכי פחות טוב"}
-RANK_SHORT   = {1: "🥇 1", 2: "🥈 2", 3: "🥉 3"}
+SCORE_OPTS = ["—", 1, 2, 3, 4, 5, 6, 7]  # leading "—" = unset sentinel
 LABELS = ["A", "B", "C"]
 BADGE_CLASS = {"A": "badge-A", "B": "badge-B", "C": "badge-C"}
 RESP_CLASS  = {"A": "resp-A",  "B": "resp-B",  "C": "resp-C"}
 
 
-def fmt_rank(x):
-    return RANK_LABELS[x]
+def fmt_score(v):
+    return "—" if v == "—" else str(v)
 
 
 # ── GOOGLE SHEETS ─────────────────────────────────────────────────────────────
@@ -115,23 +114,23 @@ def get_worksheet():
         ws = sheet.add_worksheet(WORKSHEET_NAME, rows=500, cols=20)
         ws.append_row([
             "timestamp", "session_id", "story_id",
-            "rank_A", "rank_B", "rank_C",
+            "score_A", "score_B", "score_C",
             "condition_A", "condition_B", "condition_C",
         ])
     return ws
 
 
-def save_responses(session_id, rankings, label_maps):
+def save_responses(session_id, scores, label_maps):
     ws = get_worksheet()
     rows = []
     for i, story in enumerate(STORIES):
         lm = label_maps[i]
-        r = rankings[i]
+        s = scores[i]
         rows.append([
             datetime.now(timezone.utc).isoformat(),
             session_id,
             story["id"],
-            r["A"], r["B"], r["C"],
+            s["A"], s["B"], s["C"],
             lm["A"], lm["B"], lm["C"],
         ])
     ws.append_rows(rows, value_input_option="RAW")
@@ -146,22 +145,13 @@ if "initialized" not in st.session_state:
         dict(zip(LABELS, random.sample(["H", "B", "F"], 3)))
         for _ in STORIES
     ]
-    st.session_state.rankings = [{"A": None, "B": None, "C": None} for _ in STORIES]
+    st.session_state.scores = [{"A": None, "B": None, "C": None} for _ in STORIES]
 
 
 # ── HELPERS ───────────────────────────────────────────────────────────────────
-def available_ranks(story_idx, for_label):
-    used = {
-        st.session_state.rankings[story_idx][l]
-        for l in LABELS
-        if l != for_label and st.session_state.rankings[story_idx][l] is not None
-    }
-    return [r for r in [1, 2, 3] if r not in used]
-
-
 def story_complete(story_idx):
-    vals = list(st.session_state.rankings[story_idx].values())
-    return all(v is not None for v in vals) and len(set(vals)) == 3
+    vals = list(st.session_state.scores[story_idx].values())
+    return all(v is not None for v in vals)
 
 
 # ── HEADER ────────────────────────────────────────────────────────────────────
@@ -173,9 +163,9 @@ st.markdown(
 st.markdown("""
 <div class="heb" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;
      padding:16px 22px;margin:14px 0 14px 0;line-height:1.9;">
-תגובה טובה היא תגובה אמפתית.
-<br><b>הוראות:</b> לכל סיפור מוצגות שלוש תגובות (A, B, C). דרגו כל תגובה לפי מידת האמפתיות: <b>1 = הכי טובה &nbsp;·&nbsp; 3 = הכי פחות טובה</b>.
-<br><span style="color:#6b7280;font-size:0.9em;">כל תגובה חייבת לקבל דירוג שונה. לביטול בחירה — לחצו שוב על הדירוג הנבחר.</span>
+לפניכם 5 סיפורים אישיים, ולכל סיפור שלוש תגובות (A, B, C).
+<br><b>הוראות:</b> קראו כל תגובה ודרגו אותה בנפרד לפי מידת האמפתיות שלה בסולם 1–7: <b>1 = הכי פחות אמפתית &nbsp;·&nbsp; 7 = הכי אמפתית</b>.
+<br><span style="color:#6b7280;font-size:0.9em;">אין דירוג נכון או שגוי, ואפשר לתת לשתי תגובות ציון זהה.</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -214,50 +204,37 @@ for i, story in enumerate(STORIES):
     # Story text (English — LTR)
     st.markdown(f'<div class="story-box">{story["story"]}</div>', unsafe_allow_html=True)
 
-    # Response cards — show current assigned rank in badge if set
+    # Response cards — each followed by its own 1–7 empathy score slider
     for label in LABELS:
         condition_key = lm[label]
         response_text = story["responses"][condition_key]
-        current_rank = st.session_state.rankings[i][label]
-        rank_suffix = f" &nbsp;— {RANK_SHORT[current_rank]}" if current_rank else ""
+        cur = st.session_state.get(f"score_{i}_{label}", "—")
+        score_suffix = f" &nbsp;— ציון {cur}" if cur != "—" else ""
 
         st.markdown(
             f'<div class="resp-card {RESP_CLASS[label]}">'
             f'<div style="text-align:right;direction:rtl;margin-bottom:8px;">'
-            f'<span class="badge {BADGE_CLASS[label]}">תשובה {label}{rank_suffix}</span>'
+            f'<span class="badge {BADGE_CLASS[label]}">תשובה {label}{score_suffix}</span>'
             f'</div>'
             f'<div>{response_text}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
 
-    # ── Ranking section (single block after all 3 responses) ─────────────────
-    st.markdown(
-        '<div class="heb" style="font-weight:700;font-size:1em;color:#374151;'
-        'margin:14px 0 6px 0;">דרגו את התגובות:</div>',
-        unsafe_allow_html=True,
-    )
-    with st.container(border=True):
-        for label in LABELS:
-            opts = available_ranks(i, label)
-            col_lbl, col_pills = st.columns([1, 4])
-            with col_lbl:
-                st.markdown(
-                    f'<div style="padding-top:6px;text-align:right;direction:rtl;">'
-                    f'<span class="badge {BADGE_CLASS[label]}">תשובה {label}</span></div>',
-                    unsafe_allow_html=True,
-                )
-            with col_pills:
-                sel = st.pills(
-                    f"rank_{i}_{label}",
-                    options=opts,
-                    format_func=fmt_rank,
-                    selection_mode="single",
-                    key=f"rank_{i}_{label}",
-                    label_visibility="collapsed",
-                )
-            # Update immediately so next label sees this selection
-            st.session_state.rankings[i][label] = sel
+        st.markdown(
+            '<div class="heb" style="font-size:0.85em;color:#6b7280;margin:2px 0 -2px 0;">'
+            '1 = הכי פחות אמפתית &nbsp;·&nbsp; 7 = הכי אמפתית</div>',
+            unsafe_allow_html=True,
+        )
+        sel = st.select_slider(
+            f"score_{i}_{label}",
+            options=SCORE_OPTS,
+            value="—",
+            format_func=fmt_score,
+            key=f"score_{i}_{label}",
+            label_visibility="collapsed",
+        )
+        st.session_state.scores[i][label] = None if sel == "—" else int(sel)
 
     st.divider()
 
@@ -275,13 +252,9 @@ if remaining > 0:
 if st.button("שלח", type="primary", use_container_width=True, disabled=(remaining > 0)):
     # Defensive final validation
     error = None
-    for i, r in enumerate(st.session_state.rankings):
-        vals = [r["A"], r["B"], r["C"]]
-        if any(v is None for v in vals):
-            error = f"סיפור {i+1}: יש למלא את כל הדירוגים."
-            break
-        if len(set(vals)) != 3:
-            error = f"סיפור {i+1}: כל דירוג חייב להיות שונה."
+    for i, s in enumerate(st.session_state.scores):
+        if any(v is None for v in [s["A"], s["B"], s["C"]]):
+            error = f"סיפור {i+1}: יש לדרג את כל התגובות."
             break
     if error:
         st.error(error)
@@ -289,7 +262,7 @@ if st.button("שלח", type="primary", use_container_width=True, disabled=(remai
         try:
             save_responses(
                 st.session_state.session_id,
-                st.session_state.rankings,
+                st.session_state.scores,
                 st.session_state.label_maps,
             )
             st.session_state.submitted = True
