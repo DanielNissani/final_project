@@ -79,6 +79,18 @@ div[data-testid="stPills"] button {
     font-size: 0.97em !important;
     padding: 6px 18px !important;
 }
+
+/* Larger, more visible slider thumb and track */
+div[data-testid="stSlider"] [data-baseweb="slider"] > div:first-child {
+    height: 8px !important;
+    border-radius: 4px !important;
+}
+div[data-testid="stSlider"] [role="slider"] {
+    width: 24px !important;
+    height: 24px !important;
+    top: -8px !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25) !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -90,14 +102,15 @@ SCOPES = [
 SHEET_KEY = "1hoHJpX8M3763kI28bGOS0JH2CdTyWmB2Y-0pmhTYJHU"
 WORKSHEET_NAME = "scores"
 
-SCORE_OPTS = ["—", 1, 2, 3, 4, 5, 6, 7]  # leading "—" = unset sentinel
+SCORE_OPTS = [1, 2, 3, 4, 5, 6, 7]
 LABELS = ["A", "B", "C"]
 BADGE_CLASS = {"A": "badge-A", "B": "badge-B", "C": "badge-C"}
 RESP_CLASS  = {"A": "resp-A",  "B": "resp-B",  "C": "resp-C"}
 
 
-def fmt_score(v):
-    return "—" if v == "—" else str(v)
+def _mark_score(i, label):
+    """Called on_change — marks slider as explicitly touched."""
+    st.session_state.scores[i][label] = st.session_state[f"score_{i}_{label}"]
 
 
 # ── GOOGLE SHEETS ─────────────────────────────────────────────────────────────
@@ -164,7 +177,7 @@ st.markdown("""
 <div class="heb" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;
      padding:16px 22px;margin:14px 0 14px 0;line-height:1.9;">
 לפניכם 5 סיפורים אישיים, ולכל סיפור שלוש תגובות (A, B, C).
-<br><b>הוראות:</b> קראו כל תגובה ודרגו אותה בנפרד לפי מידת האמפתיות שלה בסולם 1–7: <b>1 = הכי פחות אמפתית &nbsp;·&nbsp; 7 = הכי אמפתית</b>.
+<br><b>הוראות:</b> קראו כל תגובה ודרגו אותה בנפרד לפי מידת האמפתיות שלה בסולם 1–7: <b>1 = לא אמפתית בכלל &nbsp;·&nbsp; 7 = מאוד אמפתית</b>.
 <br><span style="color:#6b7280;font-size:0.9em;">אין דירוג נכון או שגוי, ואפשר לתת לשתי תגובות ציון זהה.</span>
 </div>
 """, unsafe_allow_html=True)
@@ -208,8 +221,8 @@ for i, story in enumerate(STORIES):
     for label in LABELS:
         condition_key = lm[label]
         response_text = story["responses"][condition_key]
-        cur = st.session_state.get(f"score_{i}_{label}", "—")
-        score_suffix = f" &nbsp;— ציון {cur}" if cur != "—" else ""
+        cur = st.session_state.scores[i][label]
+        score_suffix = f" &nbsp;— ציון {cur}" if cur is not None else ""
 
         st.markdown(
             f'<div class="resp-card {RESP_CLASS[label]}">'
@@ -223,18 +236,18 @@ for i, story in enumerate(STORIES):
 
         st.markdown(
             '<div class="heb" style="font-size:0.85em;color:#6b7280;margin:2px 0 -2px 0;">'
-            '1 = הכי פחות אמפתית &nbsp;·&nbsp; 7 = הכי אמפתית</div>',
+            '1 = לא אמפתית בכלל &nbsp;·&nbsp; 7 = מאוד אמפתית</div>',
             unsafe_allow_html=True,
         )
-        sel = st.select_slider(
+        st.select_slider(
             f"score_{i}_{label}",
             options=SCORE_OPTS,
-            value="—",
-            format_func=fmt_score,
+            value=4,
             key=f"score_{i}_{label}",
+            on_change=_mark_score,
+            args=(i, label),
             label_visibility="collapsed",
         )
-        st.session_state.scores[i][label] = None if sel == "—" else int(sel)
 
     st.divider()
 
